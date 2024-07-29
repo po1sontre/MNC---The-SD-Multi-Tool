@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Path to the configuration file
+CONFIG_FILE="./sd_multi_tool.config"
+
+# Default configuration values
+DEFAULT_MOUNT_POINT="/media/sdcard"
+DEFAULT_SOURCE_DIR=""
+
 # Function to display ASCII art
 display_art() {
     cat <<'EOF'
@@ -26,6 +33,28 @@ welcome_message() {
     echo "---------------------------------------------------"
 }
 
+# Function to create a default configuration file
+create_default_config() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "Creating default configuration file..."
+        cat <<EOL > "$CONFIG_FILE"
+# SD Multi Tool Configuration
+MOUNT_POINT="$DEFAULT_MOUNT_POINT"
+SOURCE_DIR="$DEFAULT_SOURCE_DIR"
+EOL
+    fi
+}
+
+# Function to load configuration from the file
+load_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        source "$CONFIG_FILE"
+    else
+        echo "Configuration file not found. Please create it."
+        exit 1
+    fi
+}
+
 # Function to list all block devices and their sizes
 list_devices() {
     echo "Listing all block devices:"
@@ -33,8 +62,8 @@ list_devices() {
     echo "---------------------------------------------------"
 }
 
-# Function to select and manually mount the SD card device
-manual_mount_sd_card() {
+# Function to handle manual mounting of the SD card
+manual_mount_sd() {
     list_devices
 
     read -p "Enter the name of the SD card device (e.g., sda1): " device_name
@@ -47,11 +76,11 @@ manual_mount_sd_card() {
     fi
 
     # Prompt user for mount point
-    read -p "Enter the mount point (e.g., /media/sdcard) [Leave blank to create a default mount point]: " mount_point
+    read -p "Enter the mount point (e.g., /media/sdcard) [Leave blank to use default]: " mount_point
 
     # Use a default mount point if the user leaves it blank
     if [ -z "$mount_point" ]; then
-        mount_point="/media/sdcard"
+        mount_point="$DEFAULT_MOUNT_POINT"
     fi
 
     MOUNT_POINT="$mount_point"
@@ -67,7 +96,6 @@ manual_mount_sd_card() {
     fi
 
     # Attempt to mount the SD card
-    echo "Mounting $SD_CARD_DEVICE at $MOUNT_POINT..."
     sudo mount "$SD_CARD_DEVICE" "$MOUNT_POINT"
     if [ $? -eq 0 ]; then
         echo "SD card successfully mounted at $MOUNT_POINT."
@@ -89,33 +117,15 @@ display_file_size() {
 copy_with_progress() {
     local src="$1"
     local dest="$2"
-
-    # Check if rsync is installed
-    if ! command -v rsync &> /dev/null; then
-        echo "rsync is not installed. Please install rsync and try again."
-        exit 1
-    fi
-
-    echo "Starting copy of $src to $dest..."
-    
-    # Use rsync for progress reporting and verbose output
     sudo rsync -avh --progress --no-owner --no-group "$src" "$dest" > /tmp/rsync.log 2>&1
-    if [ $? -eq 0 ]; then
-        echo "Successfully copied $(basename "$src") to $dest."
-    else
-        echo "Failed to copy $(basename "$src") to $dest. Check /tmp/rsync.log for details."
-        cat /tmp/rsync.log
-    fi
-    # Pause to review the log
-    read -p "Press Enter to continue..."
 }
 
 # Function to handle file overwrite confirmation
 confirm_overwrite() {
     local file="$1"
     if [ -f "$file" ]; then
-        read -p "File $(basename "$file") already exists on the SD card. Overwrite? (yes/no): " choice
-        if [ "$choice" != "yes" ]; then
+        read -p "File $(basename "$file") already exists on the SD card. Overwrite? (y/n): " choice
+        if [ "$choice" != "y" ]; then
             echo "Skipping $(basename "$file")."
             return 1
         fi
@@ -126,7 +136,7 @@ confirm_overwrite() {
 # Function to list files in the target directory
 list_target_files() {
     echo "Files currently on the SD card:"
-    ls "$MOUNT_POINT"
+    ls "$TARGET_DIR"
     echo "---------------------------------------------------"
 }
 
@@ -135,16 +145,15 @@ delete_file() {
     list_target_files
     echo "Select a file to delete (or type 'exit' to cancel):"
     PS3="Enter the number of the file to delete: "
-    select file in "$MOUNT_POINT"/*; do
+    select file in "$TARGET_DIR"/*; do
         if [ "$file" == "exit" ]; then
             echo "Exiting deletion process."
             break
         elif [ -f "$file" ]; then
-            read -p "Are you sure you want to delete $(basename "$file")? (yes/no): " choice
-            if [ "$choice" == "yes" ]; then
-                echo "Deleting $(basename "$file")..."
+            read -p "Are you sure you want to delete $(basename "$file")? (y/n): " choice
+            if [ "$choice" == "y" ]; then
                 sudo rm -v "$file"
-                echo "Deleted $(basename "$file") from $MOUNT_POINT"
+                echo "Deleted $(basename "$file") from $TARGET_DIR"
             else
                 echo "Skipping $(basename "$file")."
             fi
@@ -159,7 +168,11 @@ delete_file() {
 copy_file() {
     if [ -z "$SOURCE_DIR" ]; then
         echo "Source directory is not set. Please set the source directory first."
-        sleep 5
+        return
+    fi
+
+    if [ -z "$MOUNT_POINT" ]; then
+        echo "Target directory is not set. Please set the target directory before copying files."
         return
     fi
 
@@ -173,7 +186,20 @@ copy_file() {
             target_file="$MOUNT_POINT/$(basename "$file")"
             if confirm_overwrite "$target_file"; then
                 echo "Starting copy of $(basename "$file") to $MOUNT_POINT..."
+
+                # Ensure that the destination path is not empty
+                if [ -z "$MOUNT_POINT" ]; then
+                    echo "Destination directory is not set. Cannot copy file."
+                    return
+                fi
+
+                # Use rsync for copying with detailed progress and error logging
                 copy_with_progress "$file" "$MOUNT_POINT/"
+                if [ $? -eq 0 ]; then
+                    echo "Copied $(basename "$file") to $MOUNT_POINT"
+                else
+                    echo "Failed to copy file. Check /tmp/rsync.log for details."
+                fi
             fi
         else
             echo "Invalid selection. Please choose a valid file."
@@ -198,81 +224,91 @@ set_source_dir() {
     done
 }
 
-# Function to copy all files from SD card to a specified directory
-copy_all_from_sd() {
-    local DEST_DIR="$1"
+# Function to display a backup menu (optional functionality)
+backup_menu() {
+    echo "Backup menu not implemented yet."
+}
 
-    if [ ! -d "$DEST_DIR" ]; then
-        echo "Directory $DEST_DIR does not exist. Creating it now..."
-        sudo mkdir -p "$DEST_DIR"
-        if [ $? -ne 0 ]; then
-            echo "Failed to create directory $DEST_DIR. Please check permissions."
-            exit 1
-        fi
+# Function to format the SD card
+format_sd() {
+    echo "Warning: This will erase all data on the SD card."
+    read -p "Are you sure you want to format the SD card? (y/n): " choice
+    if [ "$choice" != "y" ]; then
+        echo "Format operation cancelled."
+        return
     fi
 
-    echo "Copying all files from SD card to $DEST_DIR..."
-    sudo rsync -avh --progress --no-owner --no-group "$MOUNT_POINT/" "$DEST_DIR/" > /tmp/rsync.log 2>&1
+    sudo mkfs.vfat "$SD_CARD_DEVICE"
     if [ $? -eq 0 ]; then
-        echo "All files copied to $DEST_DIR."
+        echo "SD card formatted successfully."
     else
-        echo "An error occurred during the copy process. Check /tmp/rsync.log for details."
-        cat /tmp/rsync.log
-        exit 1
+        echo "Failed to format SD card."
     fi
 }
 
-# Function to copy all files from a directory to the SD card
-copy_all_to_sd() {
-    local SOURCE_DIR="$1"
-
-    if [ ! -d "$SOURCE_DIR" ]; then
-        echo "Source directory $SOURCE_DIR does not exist. Please check and try again."
-        exit 1
-    fi
-
-    echo "Copying all files from $SOURCE_DIR to SD card..."
-    sudo rsync -avh --progress --no-owner --no-group "$SOURCE_DIR/" "$MOUNT_POINT/" > /tmp/rsync.log 2>&1
-    if [ $? -eq 0 ]; then
-        echo "All files copied to SD card."
-    else
-        echo "An error occurred during the copy process. Check /tmp/rsync.log for details."
-        cat /tmp/rsync.log
-        exit 1
-    fi
+# Function to show version information
+show_version() {
+    echo "SD Multi Tool Version 1.0"
 }
 
-# Main menu
-main_menu() {
-    welcome_message
-    echo "1. Set source directory"
-    echo "2. Copy file to SD card"
-    echo "3. Delete file from SD card"
-    echo "4. Copy all files from SD card to a directory"
-    echo "5. Copy all files from a directory to SD card"
-    echo "6. Manually mount SD card"
-    echo "7. Exit"
-    read -p "Enter your choice: " choice
+# Main script execution
+welcome_message
+create_default_config
+load_config
+
+# Ensure the mount point exists and is properly set
+if [ ! -d "$MOUNT_POINT" ]; then
+    echo "Mount point $MOUNT_POINT does not exist. Please mount the SD card manually."
+    exit 1
+fi
+
+# Main menu loop
+while true; do
+    echo "---------------------------------------------------"
+    echo "Choose an option:"
+    echo "1. Copy a file to the SD card"
+    echo "2. Delete a file from the SD card"
+    echo "3. Backup Menu"
+    echo "4. Format SD Card"
+    echo "5. Set a new source directory"
+    echo "6. Mount SD Card (manual)"
+    echo "7. Show version information"
+    echo "8. Exit"
+    echo "---------------------------------------------------"
+    echo "Note: You must set the source directory before copying files."
+    read -p "Enter your choice [1-8]: " choice
 
     case $choice in
-        1) set_source_dir ;;
-        2) copy_file ;;
-        3) delete_file ;;
-        4) 
-            read -p "Enter the destination directory: " dest_dir
-            copy_all_from_sd "$dest_dir"
+        1)
+            copy_file
             ;;
-        5) 
-            read -p "Enter the source directory: " src_dir
-            copy_all_to_sd "$src_dir"
+        2)
+            delete_file
             ;;
-        6) manual_mount_sd_card ;;
-        7) exit 0 ;;
-        *) echo "Invalid choice. Please try again." ;;
+        3)
+            backup_menu
+            ;;
+        4)
+            format_sd
+            ;;
+        5)
+            set_source_dir
+            ;;
+        6)
+            manual_mount_sd
+            ;;
+        7)
+            show_version
+            ;;
+        8)
+            break
+            ;;
+        *)
+            echo "Invalid choice. Please select 1-8."
+            ;;
     esac
+done
 
-    main_menu
-}
-
-main_menu
+# Unmount the SD card automatically on exit
+trap 'if mountpoint -q "$MOUNT_POINT"; then sudo umount "$MOUNT_POINT"; echo "SD card unmounted successfully."; fi' EXIT
 
