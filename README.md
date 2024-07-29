@@ -1,101 +1,130 @@
-# MNC - The SD Multi Tool
+```markdown
+# SD Multi Tool
 
 ## Overview
 
-MNC is a command-line utility designed to help manage files on an SD card. It provides functionality for copying, deleting, and backing up files, formatting the SD card with various file systems, and setting up a source directory for file operations.
+SD Multi Tool is a versatile script designed to manage files on an SD card. It provides functionalities for copying, deleting, backing up, and formatting SD card contents. The tool supports manual mounting and features error logging to help troubleshoot issues.
 
 ## Features
 
-- **Detect and Mount SD Card**: Automatically detect and mount your SD card, or manually specify the device and mount point.
-- **File Operations**: Copy files to/from the SD card and delete files from the SD card.
+- **Copy Files**: Transfer files from a source directory to the SD card.
+- **Delete Files**: Remove files from the SD card.
 - **Backup**: Backup files between the SD card and a local directory.
-- **Formatting**: Format the SD card with FAT32, exFAT, or NTFS file systems.
+- **Format SD Card**: Format the SD card to FAT32, exFAT, or NTFS.
+- **Manual Mounting**: Option to manually mount the SD card if needed.
 - **Source Directory Management**: Set and manage the source directory for file operations.
+- **Error Logging**: Detailed error logs for troubleshooting.
+- **Configuration File**: Automatically create and manage a default configuration file.
 
 ## Installation
 
-1. **Download the Script**: Save the script to a file, e.g., `sd_multi_tool.sh`.
-2. **Make the Script Executable**:
-   ```bash
-   chmod +x sd_multi_tool.sh
+### Prerequisites
 
-Usage
+Ensure you have `rsync` installed for file operations. On Arch Linux, you can install it with:
 
-To run the tool, execute the script from the command line:
+```bash
+sudo pacman -S rsync
+```
 
-bash
+Ensure you have the necessary permissions to mount, unmount drives, and format disks.
 
-./sd_multi_tool.sh
+### Clone the Repository
 
-Main Menu Options
+Clone the repository to your local machine:
 
-After starting the script, you'll be presented with the following options:
+```bash
+git clone https://github.com/po1sontre/MNC---The-SD-Multi-Tool.git
+cd MNC---The-SD-Multi-Tool
+```
 
-    Copy a File to the SD Card
-        Set a source directory before selecting files.
-        Choose a file from the source directory to copy to the SD card.
+## Usage
 
-    Delete a File from the SD Card
-        List files currently on the SD card.
-        Select a file to delete or type 'exit' to cancel.
+### Initial Setup
 
-    Backup Menu
-        Copy all files from SD Card to a Directory: Specify a local directory to copy files from the SD card.
-        Copy all files from a Directory to SD Card: Choose a local directory to copy files to the SD card.
-        Return to Main Menu: Go back to the main menu.
+1. **Run the Script**: Execute the script for the first time. It will create a default configuration file named `sd_multi_tool.conf` in the same directory.
 
-    Format SD Card
-        Choose a file system to format the SD card (FAT32, exFAT, NTFS).
-        Confirm the formatting operation, which will erase all data on the SD card.
+    ```bash
+    ./sd_multi_tool.sh
+    ```
 
-    Set a New Source Directory
-        List directories in your home directory.
-        Select a directory to use as the source for file operations.
+2. **Edit Configuration**: Modify the `sd_multi_tool.conf` file to set default values such as the SD card mount point.
 
-    Exit
-        Exit the tool.
+### Main Menu Options
 
-Detailed Instructions
-Selecting and Mounting the SD Card
+1. **Copy a File to the SD Card**:
+    - Set the source directory before copying.
+    - Select a file to copy from the source directory to the SD card.
 
-    List Devices: The script will list all available block devices and their sizes.
-    Enter Device Name: Provide the device name (e.g., sda1).
-    Enter Mount Point: Specify the mount point or leave blank to create a default one (/media/sdcard).
-    Mounting: The script will create the mount point if it doesn't exist and attempt to mount the SD card.
+2. **Delete a File from the SD Card**:
+    - Choose a file to delete from the SD card and confirm the deletion.
 
-Copying Files
+3. **Backup Menu**:
+    - **Copy All Files from SD Card**: Backup all files from the SD card to a local directory.
+    - **Copy All Files to SD Card**: Copy all files from a local directory to the SD card.
 
-    Set Source Directory: Use the Set a New Source Directory option to set a directory containing files to copy.
-    Select File: Choose a file from the source directory and specify the target directory on the SD card.
-    Overwrite Confirmation: Confirm if you want to overwrite an existing file on the SD card.
+4. **Format SD Card**:
+    - Select a file system (FAT32, exFAT, or NTFS) and confirm formatting.
 
-Deleting Files
+5. **Set a New Source Directory**:
+    - Choose a new source directory for file operations.
 
-    List Files: View files currently on the SD card.
-    Select File: Choose a file to delete or type 'exit' to cancel.
+6. **Mount SD Card (Manual)**:
+    - Display all available block devices with their sizes.
+    - Manually specify the device name and mount point.
 
-Backup Operations
+7. **Show Version Information**:
+    - Display the script’s version information.
 
-    Copy from SD Card: Specify a local directory to copy all files from the SD card.
-    Copy to SD Card: Choose a local directory to copy all files to the SD card.
+8. **Exit**:
+    - Exit the script.
 
-Formatting the SD Card
+### Error Handling
 
-    Choose File System: Select from FAT32, exFAT, or NTFS.
-    Confirm Formatting: Confirm the operation as it will erase all data on the SD card.
+- Errors are logged to `/tmp/rsync.log`. Check this file for detailed error messages if something goes wrong.
 
-Notes
+## Configuration File
 
-    Ensure you have the necessary permissions to mount and unmount devices.
-    The script requires sudo for mounting, copying, and formatting operations.
-    Always back up important data before formatting the SD card.
+The `sd_multi_tool.conf` file is created automatically and can be modified:
 
-Troubleshooting
+```bash
+# Example configuration file (sd_multi_tool.conf)
+MOUNT_POINT="/media/sdcard"
+SOURCE_DIR="$HOME/Downloads"
+```
 
-    Device Not Detected: Verify the device name and check connections. Use the lsblk command to list block devices.
-    Mounting Errors: Ensure the mount point is correct and the device is not already mounted.
-    Formatting Issues: Confirm that the file system command (e.g., mkfs.vfat) is installed on your system.
+## Notes
 
-License
+- Ensure that the mount point directory exists and is writable.
+- Formatting the SD card will erase all data. Ensure that all important data is backed up.
 
-This script is provided under the MIT License. See the LICENSE file for more details.
+## Contributing
+
+If you have suggestions or improvements, please open an issue or submit a pull request on GitHub.
+
+## License
+
+This script is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Credits
+
+This script is developed and maintained by [po1sontre](https://github.com/po1sontre). Thanks for your contributions and support!
+```
+
+### Steps to Update `README.md` on GitHub
+
+1. **Edit the `README.md` File**: Open the `README.md` file in your preferred editor and replace its content with the updated text provided above.
+
+2. **Save and Commit Changes**: Save the changes and commit them.
+
+    ```bash
+    git add README.md
+    git commit -m "Update README to reflect new features and improvements"
+    ```
+
+3. **Push the Changes**: Push the updated `README.md` to your GitHub repository.
+
+    ```bash
+    git push
+    ```
+
+This updated `README.md` will reflect the current features and functionality of your SD Multi Tool script, including proper attribution.
