@@ -110,21 +110,4 @@ This script is licensed under the MIT License. See the [LICENSE](LICENSE) file f
 This script is developed and maintained by [po1sontre](https://github.com/po1sontre). Thanks for your contributions and support!
 ```
 
-### Steps to Update `README.md` on GitHub
 
-1. **Edit the `README.md` File**: Open the `README.md` file in your preferred editor and replace its content with the updated text provided above.
-
-2. **Save and Commit Changes**: Save the changes and commit them.
-
-    ```bash
-    git add README.md
-    git commit -m "Update README to reflect new features and improvements"
-    ```
-
-3. **Push the Changes**: Push the updated `README.md` to your GitHub repository.
-
-    ```bash
-    git push
-    ```
-
-This updated `README.md` will reflect the current features and functionality of your SD Multi Tool script, including proper attribution.
